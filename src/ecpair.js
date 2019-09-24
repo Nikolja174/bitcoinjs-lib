@@ -6,7 +6,7 @@ var randomBytes = require('randombytes')
 var typeforce = require('typeforce')
 var types = require('./types')
 var wif = require('wif')
-var safeBuffer = require('safe-buffer').Buffer
+var safeBuffer = require('safe-buffer')
 
 var NETWORKS = require('./networks')
 var BigInteger = require('bigi')

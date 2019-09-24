@@ -1,10 +1,12 @@
 var baddress = require('./address')
 var bcrypto = require('./crypto')
+var bs58 = require('bs58')
 var ecdsa = require('./ecdsa')
 var randomBytes = require('randombytes')
 var typeforce = require('typeforce')
 var types = require('./types')
 var wif = require('wif')
+var safeBuffer = require('safe-buffer').Buffer
 
 var NETWORKS = require('./networks')
 var BigInteger = require('bigi')
@@ -101,7 +103,26 @@ ECPair.makeRandom = function (options) {
 }
 
 ECPair.prototype.getAddress = function () {
-  return baddress.toBase58Check(bcrypto.hash160(this.getPublicKeyBuffer()), this.getNetwork().pubKeyHash)
+  if (this.getNetwork().pubKeyHash === 0x28) {
+    var hash = bcrypto.hash160(this.getPublicKeyBuffer())
+    var payload = safeBuffer.Buffer(21)
+    payload.writeUInt8(NETWORKS.hdac.pubKeyHash, 0)
+    hash.copy(payload, 1)
+
+    var checksum = bcrypto.hash256(payload).slice(0, 4).reverse()
+
+    var hdacChecksum = safeBuffer.Buffer.from('' + NETWORKS.hdac.addressChecksumValue, 'hex').reverse()
+
+    var length = Math.max(checksum.length, hdacChecksum.length)
+    var buffer = safeBuffer.Buffer.allocUnsafe(length)
+    for (var i = 0; i < length; ++i) {
+      buffer[i] = checksum[i] ^ hdacChecksum[i]
+    }
+
+    return bs58.encode(safeBuffer.Buffer.concat([payload, buffer.reverse()], payload.length + 4))
+  } else {
+    return baddress.toBase58Check(bcrypto.hash160(this.getPublicKeyBuffer()), this.getNetwork().pubKeyHash)
+  }
 }
 
 ECPair.prototype.getNetwork = function () {

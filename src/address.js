@@ -1,11 +1,23 @@
 var Buffer = require('safe-buffer').Buffer
 var bech32 = require('bech32')
 var bs58check = require('bs58check')
+var bs58 = require('bs58')
 var bscript = require('./script')
 var btemplates = require('./templates')
 var networks = require('./networks')
 var typeforce = require('typeforce')
 var types = require('./types')
+
+function fromBase58 (address) {
+  var payload = bs58.decode(address)
+  // if (payload.length < 21) throw new TypeError(address + ' is too short')
+  // if (payload.length > 21) throw new TypeError(address + ' is too long')
+
+  var version = payload.readUInt8(0)
+  var hash = payload.slice(1, 21)
+
+  return { version: version, hash: hash }
+}
 
 function fromBase58Check (address) {
   var payload = bs58check.decode(address)
@@ -64,7 +76,11 @@ function toOutputScript (address, network) {
 
   var decode
   try {
-    decode = fromBase58Check(address)
+    if (network.pubKeyHash === 0x28) {
+      decode = fromBase58(address)
+    } else {
+      decode = fromBase58Check(address)
+    }
   } catch (e) {}
 
   if (decode) {
